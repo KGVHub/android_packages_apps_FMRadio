@@ -16,4 +16,7 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <bool name="config_useSoftwareRenderingForAudio" translatable="false">true</bool>
+    <!-- Route FM audio with audio HAL parameters (handleFm / FM_Volume, as on
+         Spreadtrum) instead of an FM tuner audio patch or software rendering. -->
+    <bool name="config_useHalFmAudioParameters" translatable="false">false</bool>
 </resources>

@@ -51,6 +51,13 @@ public class FmUtils {
     // convert rate
     private static final int CONVERT_RATE = 10;
 
+    /**
+     * The lowest station of the band, where a full scan starts
+     */
+    public static int getLowestStation() {
+        return LOWEST_STATION;
+    }
+
     // minimum storage space for record (512KB).
     // Need to check before starting recording and during recording to avoid
     // recording keeps going but there is no free space in sdcard.

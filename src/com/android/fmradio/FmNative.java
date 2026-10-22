@@ -80,7 +80,7 @@ public class FmNative {
      *
      * @return The scan station array(short)
      */
-    static native short[] autoScan();
+    static native short[] autoScan(int startStation);
 
     /**
      * Stop scan, also can stop seek, other native when scan should call stop
@@ -151,4 +151,39 @@ public class FmNative {
      * @return (0, success; 1 failed; 2 not support)
      */
     static native int switchAntenna(int antenna);
+
+    /*
+     * Natives the Spreadtrum (SC7731E) libfmjni also registers. RegisterNatives
+     * fails unless every one is declared, even though the app does not use them.
+     */
+    static native int getBler();
+    static native int getRssi();
+    static native int getSnr();
+    static native int readRegParm(FmRegCtlParms parm);
+    static native int writeRegParm(FmRegCtlParms parm);
+    static native int getTuneParm(FmSeekCriteriaParms parm);
+    static native int setTuneParm(FmSeekCriteriaParms parm);
+    static native int getAudioParm(FmAudioThresholdParms parm);
+    static native int setAudioParm(FmAudioThresholdParms parm);
+
+    static class FmRegCtlParms {
+        int rw_flag;
+        int addr;
+        int val;
+    }
+
+    static class FmSeekCriteriaParms {
+        int rssi_th;
+        int snr_th;
+        int freq_offset_th;
+        int pilot_power_th;
+        int noise_power_th;
+    }
+
+    static class FmAudioThresholdParms {
+        int hbound;
+        int lbound;
+        int power_th;
+        int phyt;
+    }
 }

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 ifneq ($(BOARD_HAVE_QCOM_FM),true)
+# Devices that ship their own libfmjni (e.g. Spreadtrum) set BOARD_FMRADIO_PREBUILT_JNI.
+ifneq ($(BOARD_FMRADIO_PREBUILT_JNI),true)
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -36,4 +38,5 @@ LOCAL_MODULE := libfmjni
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+endif # BOARD_FMRADIO_PREBUILT_JNI
 endif # BOARD_HAVE_QCOM_FM

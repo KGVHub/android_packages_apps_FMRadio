@@ -177,6 +177,9 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
     // Instance variables
     private Context mContext = null;
     private AudioManager mAudioManager = null;
+    // FM audio is switched by audio HAL parameters (config_useHalFmAudioParameters)
+    private boolean mUseHalFmParameters = false;
+    private boolean mIsHalFmAudioOn = false;
     private ActivityManager mActivityManager = null;
     //private MediaPlayer mFmPlayer = null;
     private WakeLock mWakeLock = null;
@@ -274,6 +277,12 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                 // screen off, if FM play, close rds
             } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                 setRdsAsync(false);
+            } else if (AudioManager.VOLUME_CHANGED_ACTION.equals(action)) {
+                if (mIsHalFmAudioOn && intent.getIntExtra(AudioManager.EXTRA_VOLUME_STREAM_TYPE, -1)
+                        == AudioManager.STREAM_MUSIC) {
+                    mAudioManager.setParameters("FM_Volume=" + intent.getIntExtra(
+                            AudioManager.EXTRA_VOLUME_STREAM_VALUE, 0) + ";");
+                }
                 // switch antenna when headset plug in or plug out
             } else if (Intent.ACTION_HEADSET_PLUG.equals(action)) {
                 // switch antenna should not impact audio focus status
@@ -836,7 +845,7 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         short[] stationsInShort = null;
         if (!mIsStopScanCalled) {
             mIsNativeScanning = true;
-            stationsInShort = FmNative.autoScan();
+            stationsInShort = FmNative.autoScan(FmUtils.getLowestStation());
             mIsNativeScanning = false;
         }
 
@@ -1277,6 +1286,7 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         super.onCreate();
         mContext = getApplicationContext();
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        mUseHalFmParameters = getResources().getBoolean(R.bool.config_useHalFmAudioParameters);
         mActivityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
@@ -1448,6 +1458,9 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_HEADSET_PLUG);
+        if (mUseHalFmParameters) {
+            filter.addAction(AudioManager.VOLUME_CHANGED_ACTION);
+        }
         mBroadcastReceiver = new FmServiceBroadcastReceiver();
         registerReceiver(mBroadcastReceiver, filter);
     }
@@ -1688,11 +1701,35 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
             }
 
             startAudioTrack();
+            if (mUseHalFmParameters) {
+                setHalFmAudio(true);
+                return;
+            }
             startPatchOrRender();
         } else {
+            if (mUseHalFmParameters) {
+                setHalFmAudio(false);
+                return;
+            }
             releaseAudioPatch();
             stopRender();
         }
+    }
+
+    /*
+     * The audio HAL mixes FM into the active output when handleFm=1; the
+     * silent AudioTrack started before keeps that output routed. FM_Volume
+     * follows the music stream index.
+     */
+    private void setHalFmAudio(boolean on) {
+        if (on) {
+            mAudioManager.setParameters("handleFm=1;FM_Volume="
+                    + mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) + ";");
+        } else {
+            mAudioManager.setParameters("handleFm=0;");
+        }
+        mIsHalFmAudioOn = on;
+        Log.d(TAG, "setHalFmAudio " + on);
     }
 
     private void startPatchOrRender() {
